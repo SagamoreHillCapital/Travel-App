@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ETA Travel Company Search</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>ETA Travel Company Search Tracker</h1>
+      <p>Pull public company listings 50 at a time, then triage each as no / maybe / yes.</p>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h2>Public Search (50 at a time)</h2>
+        <form id="discovery-form" class="filters">
+          <label>
+            Location (city/state)
+            <input id="search-location" required placeholder="Seattle, WA" />
+          </label>
+          <label>
+            Company Type
+            <select id="search-type">
+              <option value="all">Tour Operators + Travel Agencies</option>
+              <option value="tour operator">Tour Operators</option>
+              <option value="retail travel agency">Retail Travel Agencies</option>
+            </select>
+          </label>
+          <label>
+            Specialty Keyword (optional)
+            <input id="search-keyword" placeholder="Africa, Arctic, Cruises" />
+          </label>
+          <div class="actions">
+            <button type="submit">Load First 50</button>
+            <button type="button" id="prev-batch" class="secondary">Previous 50</button>
+            <button type="button" id="next-batch" class="secondary">Next 50</button>
+          </div>
+        </form>
+        <p id="batch-status" class="muted">Run a search to start reviewing public listings.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Filter Reviewed Lists</h2>
+        <div class="filters">
+          <label>
+            Location
+            <input id="location-filter" placeholder="Filter city/state" />
+          </label>
+          <label>
+            Owner
+            <input id="owner-filter" placeholder="Filter owner" />
+          </label>
+          <label>
+            Specialty
+            <input id="specialty-filter" placeholder="Filter specialties" />
+          </label>
+          <label>
+            Type
+            <select id="type-filter">
+              <option value="all">All</option>
+              <option value="tour operator">Tour Operator</option>
+              <option value="retail travel agency">Retail Travel Agency</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="board">
+        <div class="column">
+          <h3>Current Batch: Open Research</h3>
+          <div id="open-list" class="list"></div>
+        </div>
+        <div class="column maybe">
+          <h3>Maybe (Needs More Research)</h3>
+          <div id="maybe-list" class="list"></div>
+        </div>
+        <div class="column good">
+          <h3>Good Candidate</h3>
+          <div id="good-list" class="list"></div>
+        </div>
+        <div class="column rejected">
+          <h3>Rejected (Won't Show in Search)</h3>
+          <div id="rejected-list" class="list"></div>
+        </div>
+      </section>
+    </main>
+
+    <template id="company-template">
+      <article class="card">
+        <div class="card-header">
+          <h4 class="company-name"></h4>
+          <span class="company-type"></span>
+        </div>
+        <dl>
+          <dt>Owner</dt><dd class="owner"></dd>
+          <dt>Location</dt><dd class="location"></dd>
+          <dt>Employees/Agents</dt><dd class="employees"></dd>
+          <dt>Specialties</dt><dd class="specialties"></dd>
+          <dt>Website</dt><dd><a class="website" target="_blank" rel="noopener"></a></dd>
+        </dl>
+        <label>
+          Notes
+          <textarea class="notes" rows="2"></textarea>
+        </label>
+        <div class="status-buttons">
+          <button type="button" class="status-btn red" data-status="rejected" title="Not a candidate">✕</button>
+          <button type="button" class="status-btn gray" data-status="maybe" title="Maybe">●</button>
+          <button type="button" class="status-btn green" data-status="good" title="Good candidate">✓</button>
+          <button type="button" class="status-btn clear" data-status="open" title="Move back to open">↺</button>
+        </div>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>

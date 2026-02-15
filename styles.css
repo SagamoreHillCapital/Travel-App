@@ -1,0 +1,178 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f2f4f8;
+  color: #1b1f24;
+}
+
+header {
+  padding: 1rem 1.5rem;
+  background: #0a4f88;
+  color: #fff;
+}
+
+main {
+  padding: 1rem 1.5rem 2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.panel {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.filters {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  border: 1px solid #c7ced8;
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 0.95rem;
+  cursor: pointer;
+}
+
+button[type='submit'] {
+  background: #0a4f88;
+  color: #fff;
+}
+
+.secondary {
+  background: #dbe2ea;
+  color: #1b1f24;
+}
+
+.muted {
+  color: #596574;
+  margin-bottom: 0;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(240px, 1fr));
+  gap: 0.9rem;
+}
+
+.column {
+  background: #fff;
+  padding: 0.8rem;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.column h3 {
+  margin-top: 0.2rem;
+}
+
+.list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.card {
+  border: 1px solid #d6dde8;
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #fbfcfe;
+}
+
+.card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.card h4 {
+  margin: 0;
+}
+
+.card dl {
+  margin: 0.6rem 0;
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+.card dt {
+  font-weight: 700;
+}
+
+.card dd {
+  margin: 0;
+}
+
+.status-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.status-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+  color: #fff;
+  cursor: pointer;
+}
+
+.red { background: #bb1e2d; }
+.gray { background: #6a6f77; }
+.green { background: #218c4f; }
+.clear { background: #1f5fa8; }
+
+@media (max-width: 1200px) {
+  .board {
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .board {
+    grid-template-columns: 1fr;
+  }
+}
