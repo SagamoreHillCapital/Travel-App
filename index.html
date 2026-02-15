@@ -9,13 +9,23 @@
   <body>
     <header>
       <h1>ETA Travel Company Search Tracker</h1>
-      <p>Pull public company listings 50 at a time, then triage each as no / maybe / yes.</p>
+      <p>Pull company listings 50 at a time, then triage each as no / maybe / yes.</p>
     </header>
 
     <main>
       <section class="panel">
-        <h2>Public Search (50 at a time)</h2>
+        <h2>Discovery Search (50 at a time)</h2>
         <form id="discovery-form" class="filters">
+          <label>
+            Data Provider
+            <select id="search-provider">
+              <option value="google">Google Places (via proxy)</option>
+              <option value="yelp">Yelp (via proxy)</option>
+              <option value="foursquare">Foursquare (via proxy)</option>
+              <option value="opencorporates">OpenCorporates</option>
+              <option value="directory">Structured Directory Scraper (via proxy)</option>
+            </select>
+          </label>
           <label>
             Location (city/state)
             <input id="search-location" required placeholder="Seattle, WA" />
@@ -32,13 +42,18 @@
             Specialty Keyword (optional)
             <input id="search-keyword" placeholder="Africa, Arctic, Cruises" />
           </label>
+          <label>
+            Proxy API Base URL (for Google/Yelp/Foursquare/Directory)
+            <input id="proxy-base" placeholder="http://localhost:8787" />
+          </label>
           <div class="actions">
             <button type="submit">Load First 50</button>
             <button type="button" id="prev-batch" class="secondary">Previous 50</button>
             <button type="button" id="next-batch" class="secondary">Next 50</button>
           </div>
         </form>
-        <p id="batch-status" class="muted">Run a search to start reviewing public listings.</p>
+        <p id="provider-help" class="muted"></p>
+        <p id="batch-status" class="muted">Run a search to start reviewing listings.</p>
       </section>
 
       <section class="panel">

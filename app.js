@@ -6,9 +6,12 @@ let companies = loadCompanies();
 let searchState = loadSearchState();
 
 const discoveryForm = document.getElementById('discovery-form');
+const searchProvider = document.getElementById('search-provider');
 const searchLocation = document.getElementById('search-location');
 const searchType = document.getElementById('search-type');
 const searchKeyword = document.getElementById('search-keyword');
+const proxyBase = document.getElementById('proxy-base');
+const providerHelp = document.getElementById('provider-help');
 const nextBatchButton = document.getElementById('next-batch');
 const prevBatchButton = document.getElementById('prev-batch');
 const batchStatus = document.getElementById('batch-status');
@@ -20,11 +23,17 @@ const typeFilter = document.getElementById('type-filter');
 
 discoveryForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+  searchState.provider = searchProvider.value;
   searchState.location = searchLocation.value.trim();
   searchState.companyType = searchType.value;
   searchState.keyword = searchKeyword.value.trim();
+  searchState.proxyBase = proxyBase.value.trim();
   searchState.offset = 0;
   await fetchBatch();
+});
+
+searchProvider.addEventListener('change', () => {
+  updateProviderHelp();
 });
 
 nextBatchButton.addEventListener('click', async () => {
@@ -58,28 +67,26 @@ function saveCompanies() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(companies));
 }
 
+function defaultSearchState() {
+  return {
+    provider: 'google',
+    location: '',
+    companyType: 'all',
+    keyword: '',
+    proxyBase: '',
+    offset: 0,
+    currentBatchIds: []
+  };
+}
+
 function loadSearchState() {
   const stored = localStorage.getItem(SEARCH_STATE_KEY);
-  if (!stored) {
-    return {
-      location: '',
-      companyType: 'all',
-      keyword: '',
-      offset: 0,
-      currentBatchIds: []
-    };
-  }
+  if (!stored) return defaultSearchState();
 
   try {
-    return JSON.parse(stored);
+    return { ...defaultSearchState(), ...JSON.parse(stored) };
   } catch {
-    return {
-      location: '',
-      companyType: 'all',
-      keyword: '',
-      offset: 0,
-      currentBatchIds: []
-    };
+    return defaultSearchState();
   }
 }
 
@@ -87,7 +94,7 @@ function saveSearchState() {
   localStorage.setItem(SEARCH_STATE_KEY, JSON.stringify(searchState));
 }
 
-function buildQuery() {
+function buildQueryText() {
   const typeText = {
     all: 'travel agency or tour operator',
     'tour operator': 'tour operator',
@@ -97,77 +104,137 @@ function buildQuery() {
   return [typeText, searchState.location, searchState.keyword].filter(Boolean).join(' ');
 }
 
-function inferType(record) {
-  const haystack = `${record.type || ''} ${record.class || ''} ${record.display_name || ''}`.toLowerCase();
-  if (haystack.includes('tour')) return 'tour operator';
-  return 'retail travel agency';
+function requiresProxy(provider) {
+  return ['google', 'yelp', 'foursquare', 'directory'].includes(provider);
 }
 
-function mapResultToCompany(record) {
-  const address = record.address || {};
-  const location = [address.city, address.town, address.village, address.state]
-    .filter(Boolean)
-    .slice(0, 2)
-    .join(', ') || record.display_name;
+function updateProviderHelp() {
+  const provider = searchProvider.value;
+  if (!requiresProxy(provider)) {
+    providerHelp.textContent = 'OpenCorporates runs directly from the browser.';
+    return;
+  }
 
-  const website = record.extratags?.website || record.extratags?.contact_website || 'Not listed';
+  providerHelp.textContent = 'This provider requires a backend/proxy endpoint that holds API keys securely.';
+}
 
+function normalizeCompany(input, provider) {
   return {
-    id: `${record.osm_type}-${record.osm_id}`,
-    name: record.name || record.display_name.split(',')[0],
-    type: inferType(record),
-    owner: 'Not publicly listed',
-    location,
-    employees: 'Not publicly listed',
-    specialties: searchState.keyword || 'General travel services',
-    website,
+    id: `${provider}-${input.id}`,
+    name: input.name || 'Unknown Company',
+    type: input.type || 'retail travel agency',
+    owner: input.owner || 'Not publicly listed',
+    location: input.location || 'Not publicly listed',
+    employees: input.employees || 'Not publicly listed',
+    specialties: input.specialties || searchState.keyword || 'General travel services',
+    website: input.website || 'Not listed',
     notes: '',
     status: 'open'
   };
 }
 
-async function fetchBatch() {
-  const query = buildQuery();
+function companyTypeFromText(text) {
+  const lower = text.toLowerCase();
+  if (lower.includes('tour')) return 'tour operator';
+  return 'retail travel agency';
+}
 
-  if (!query || !searchState.location) {
-    batchStatus.textContent = 'Enter a location to run search.';
-    return;
+async function fetchFromProxy(provider, query, offset) {
+  const base = searchState.proxyBase.replace(/\/$/, '');
+  if (!base) {
+    throw new Error('Enter Proxy API Base URL for this provider.');
   }
 
-  batchStatus.textContent = `Loading results ${searchState.offset + 1}-${searchState.offset + BATCH_SIZE}...`;
+  const url = new URL(`${base}/${provider}-search`);
+  url.searchParams.set('query', query);
+  url.searchParams.set('location', searchState.location);
+  url.searchParams.set('type', searchState.companyType);
+  url.searchParams.set('keyword', searchState.keyword);
+  url.searchParams.set('limit', String(BATCH_SIZE));
+  url.searchParams.set('offset', String(offset));
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`${provider} search failed with status ${response.status}`);
+  }
+
+  const json = await response.json();
+  const items = Array.isArray(json.items) ? json.items : [];
+  return items.map((item) => normalizeCompany(item, provider));
+}
+
+async function fetchFromOpenCorporates(query, offset) {
+  const page = Math.floor(offset / BATCH_SIZE) + 1;
+  const url = new URL('https://api.opencorporates.com/v0.4/companies/search');
+  url.searchParams.set('q', query);
+  url.searchParams.set('per_page', String(BATCH_SIZE));
+  url.searchParams.set('page', String(page));
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`OpenCorporates search failed with status ${response.status}`);
+  }
+
+  const data = await response.json();
+  const companiesList = data?.results?.companies || [];
+
+  return companiesList.map((entry) => {
+    const record = entry.company;
+    const location = [record.registered_address_in_full, record.jurisdiction_code]
+      .filter(Boolean)
+      .join(' | ');
+
+    return normalizeCompany(
+      {
+        id: record.company_number || record.opencorporates_url || crypto.randomUUID(),
+        name: record.name,
+        type: companyTypeFromText(record.name || ''),
+        owner: 'Not publicly listed',
+        location: location || searchState.location,
+        employees: 'Not publicly listed',
+        specialties: searchState.keyword || 'General travel services',
+        website: record.opencorporates_url || 'Not listed'
+      },
+      'opencorporates'
+    );
+  });
+}
+
+async function fetchProviderBatch() {
+  const query = buildQueryText();
+  const provider = searchState.provider;
+
+  if (!query || !searchState.location) {
+    throw new Error('Enter a location to run search.');
+  }
+
+  if (provider === 'opencorporates') {
+    return fetchFromOpenCorporates(query, searchState.offset);
+  }
+
+  if (provider === 'google' || provider === 'yelp' || provider === 'foursquare' || provider === 'directory') {
+    return fetchFromProxy(provider, query, searchState.offset);
+  }
+
+  throw new Error('Unsupported provider selected.');
+}
+
+async function fetchBatch() {
+  const query = buildQueryText();
+  batchStatus.textContent = `Loading ${searchState.provider} results ${searchState.offset + 1}-${searchState.offset + BATCH_SIZE}...`;
 
   try {
-    const url = new URL('https://nominatim.openstreetmap.org/search');
-    url.searchParams.set('q', query);
-    url.searchParams.set('format', 'jsonv2');
-    url.searchParams.set('addressdetails', '1');
-    url.searchParams.set('extratags', '1');
-    url.searchParams.set('limit', String(BATCH_SIZE));
-    url.searchParams.set('offset', String(searchState.offset));
-
-    const response = await fetch(url.toString(), {
-      headers: {
-        Accept: 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Search failed with status ${response.status}`);
-    }
-
-    const records = await response.json();
+    const incomingCompanies = await fetchProviderBatch();
     const newBatchIds = [];
 
-    records.forEach((record) => {
-      const incoming = mapResultToCompany(record);
+    incomingCompanies.forEach((incoming) => {
       const existing = companies.find((company) => company.id === incoming.id);
 
       if (existing) {
-        if (incoming.website !== 'Not listed') existing.website = incoming.website;
-        if (existing.specialties === 'General travel services' && incoming.specialties !== 'General travel services') {
-          existing.specialties = incoming.specialties;
-        }
+        existing.name = incoming.name;
+        existing.type = incoming.type;
         existing.location = incoming.location;
+        if (existing.website === 'Not listed' && incoming.website !== 'Not listed') existing.website = incoming.website;
       } else {
         companies.push(incoming);
       }
@@ -179,18 +246,15 @@ async function fetchBatch() {
     saveCompanies();
     saveSearchState();
 
-    const count = records.length;
-    if (!count && searchState.offset > 0) {
-      batchStatus.textContent = 'No additional results found for this query. Try changing location or keyword.';
-    } else {
-      const start = searchState.offset + 1;
-      const end = searchState.offset + count;
-      batchStatus.textContent = `Showing public results ${start}-${end || searchState.offset} for "${query}".`;
-    }
+    const start = searchState.offset + 1;
+    const end = searchState.offset + incomingCompanies.length;
+    batchStatus.textContent = incomingCompanies.length
+      ? `Showing ${searchState.provider} results ${start}-${end} for "${query}".`
+      : `No results found for ${searchState.provider} with this query.`;
 
     render();
   } catch (error) {
-    batchStatus.textContent = `Could not fetch public results: ${error.message}`;
+    batchStatus.textContent = `Could not fetch results: ${error.message}`;
   }
 }
 
@@ -221,11 +285,7 @@ function createCard(company) {
 
   const website = card.querySelector('.website');
   website.textContent = company.website;
-  if (company.website.startsWith('http')) {
-    website.href = company.website;
-  } else {
-    website.href = '#';
-  }
+  website.href = company.website.startsWith('http') ? company.website : '#';
 
   const notes = card.querySelector('.notes');
   notes.value = company.notes || '';
@@ -262,20 +322,17 @@ function renderColumn(elementId, list) {
 }
 
 function render() {
+  searchProvider.value = searchState.provider;
   searchLocation.value = searchState.location;
   searchType.value = searchState.companyType;
   searchKeyword.value = searchState.keyword;
+  proxyBase.value = searchState.proxyBase;
+  updateProviderHelp();
 
   const batchSet = new Set(searchState.currentBatchIds);
-
-  const openCurrentBatch = applyFilters(
-    companies.filter((company) => company.status === 'open' && batchSet.has(company.id))
-  );
-
+  const openCurrentBatch = applyFilters(companies.filter((company) => company.status === 'open' && batchSet.has(company.id)));
   const maybeAndFiltered = applyFilters(companies.filter((company) => company.status === 'maybe'));
   const goodAndFiltered = applyFilters(companies.filter((company) => company.status === 'good'));
-
-  // rejected companies are intentionally excluded from search filters/batches
   const rejected = companies.filter((company) => company.status === 'rejected');
 
   renderColumn('open-list', openCurrentBatch);
