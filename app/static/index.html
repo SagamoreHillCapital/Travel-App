@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ETA Travel Discovery</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>ETA Travel Company Discovery + Triage</h1>
+      <p>Full-stack mode (FastAPI + SQLite). Load 50 at a time and triage.</p>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h2>Search</h2>
+        <form id="search-form" class="filters">
+          <label>Location<input id="location" required placeholder="Boston, MA" /></label>
+          <label>
+            Company Type
+            <select id="company-type">
+              <option value="all">All</option>
+              <option value="tour operator">Tour Operator</option>
+              <option value="retail travel agency">Retail Travel Agency</option>
+            </select>
+          </label>
+          <label>Specialty<input id="specialty" placeholder="Arctic" /></label>
+          <div class="actions">
+            <button type="submit">Load 50</button>
+            <button type="button" id="prev">Previous</button>
+            <button type="button" id="next">Next</button>
+          </div>
+        </form>
+        <p id="providers" class="muted"></p>
+        <p id="status" class="muted"></p>
+      </section>
+
+      <section class="board">
+        <div class="column"><h3>Open</h3><div id="open-list" class="list"></div></div>
+        <div class="column"><h3>Maybe</h3><div id="maybe-list" class="list"></div></div>
+        <div class="column"><h3>Good</h3><div id="good-list" class="list"></div></div>
+        <div class="column"><h3>Rejected</h3><div id="rejected-list" class="list"></div></div>
+      </section>
+    </main>
+
+    <template id="card-template">
+      <article class="card">
+        <h4 class="name"></h4>
+        <p><b>Owner:</b> <span class="owner"></span></p>
+        <p><b>Location:</b> <span class="location"></span></p>
+        <p><b>Employees/Agents:</b> <span class="employees"></span></p>
+        <p><b>Specialties:</b> <span class="specialties"></span></p>
+        <p><a class="website" target="_blank" rel="noopener"></a></p>
+        <textarea class="notes" rows="2" placeholder="Notes"></textarea>
+        <div class="status-buttons">
+          <button class="red" data-status="rejected">✕</button>
+          <button class="gray" data-status="maybe">●</button>
+          <button class="green" data-status="good">✓</button>
+          <button class="clear" data-status="open">↺</button>
+        </div>
+      </article>
+    </template>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
