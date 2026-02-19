@@ -1,0 +1,12 @@
+services:
+  eta-app:
+    build: ./app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - eta_data:/data
+
+volumes:
+  eta_data:
